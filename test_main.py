@@ -1,3 +1,4 @@
+from contextlib import closing
 from datetime import date as real_date
 
 from fastapi.testclient import TestClient
@@ -71,6 +72,39 @@ def test_summary_excludes_day_just_outside_window(monkeypatch):
         client.post(
             f"/habits/{habit_id}/checkin",
             json={"day": "2026-09-15"},
+        ).status_code
+        == 200
+    )
+
+    response = client.get(f"/habits/{habit_id}/summary")
+
+    assert response.status_code == 200
+    assert response.json() == {"habit_id": habit_id, "count": 0}
+
+
+def test_summary_excludes_malformed_legacy_checkins(monkeypatch):
+    monkeypatch.setattr(main, "date", FrozenDate)
+    habit_id = client.post("/habits", json={"name": "Legacy check-in"}).json()["id"]
+    with closing(main.get_db()) as connection:
+        connection.execute(
+            "INSERT INTO checkins (habit_id, day) VALUES (?, ?)",
+            (habit_id, "2026-09-16x"),
+        )
+        connection.commit()
+
+    response = client.get(f"/habits/{habit_id}/summary")
+
+    assert response.status_code == 200
+    assert response.json() == {"habit_id": habit_id, "count": 0}
+
+
+def test_summary_excludes_future_checkins(monkeypatch):
+    monkeypatch.setattr(main, "date", FrozenDate)
+    habit_id = client.post("/habits", json={"name": "Future check-in"}).json()["id"]
+    assert (
+        client.post(
+            f"/habits/{habit_id}/checkin",
+            json={"day": "2026-09-23"},
         ).status_code
         == 200
     )

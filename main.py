@@ -97,11 +97,22 @@ def habit_summary(habit_id: int):
         if habit is None:
             raise HTTPException(status_code=404, detail="unknown habit")
         row = conn.execute(
-            """SELECT COUNT(*) AS count FROM checkins
+            """SELECT day FROM checkins
                WHERE habit_id = ? AND day BETWEEN ? AND ?""",
             (habit_id, start_day.isoformat(), today.isoformat()),
-        ).fetchone()
-    return {"habit_id": habit_id, "count": row["count"]}
+        ).fetchall()
+    count = 0
+    for checkin in row:
+        try:
+            checkin_day = date.fromisoformat(checkin["day"])
+        except ValueError:
+            continue
+        if (
+            checkin_day.isoformat() == checkin["day"]
+            and start_day <= checkin_day <= today
+        ):
+            count += 1
+    return {"habit_id": habit_id, "count": count}
 
 
 @app.get("/habits/{habit_id}/checkins")
