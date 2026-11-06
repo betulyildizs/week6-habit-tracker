@@ -10,13 +10,14 @@ Test:
     pytest
 """
 
-from datetime import date, timedelta
+import re
 import sqlite3
 from contextlib import closing
+from datetime import date, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 DB_PATH = Path(__file__).parent / "habits.db"
 
@@ -50,9 +51,27 @@ init_db()
 class HabitIn(BaseModel):
     name: str
 
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("name must not be empty or whitespace")
+        return value
+
 
 class CheckinIn(BaseModel):
     day: str  # ISO date, e.g. "2026-09-22"
+
+    @field_validator("day")
+    @classmethod
+    def day_must_be_a_real_iso_date(cls, value: str) -> str:
+        if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+            raise ValueError("day must be a real date in YYYY-MM-DD format")
+        try:
+            date.fromisoformat(value)
+        except ValueError:
+            raise ValueError("day must be a real date in YYYY-MM-DD format") from None
+        return value
 
 
 @app.post("/habits")
