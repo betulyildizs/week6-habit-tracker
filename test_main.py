@@ -5,6 +5,8 @@ from main import app
 
 client = TestClient(app)
 
+NON_STRING_VALUES = [None, 42, 3.14, True, [], {}]
+
 
 def test_create_and_list_habit():
     r = client.post("/habits", json={"name": "Read 20 minutes"})
@@ -23,6 +25,14 @@ def test_create_habit_rejects_empty_or_whitespace_name(name):
 
     assert response.status_code == 422
     assert "name must not be empty or whitespace" in response.text
+
+
+@pytest.mark.parametrize("name", NON_STRING_VALUES)
+def test_create_habit_rejects_non_string_name(name):
+    response = client.post("/habits", json={"name": name})
+
+    assert response.status_code == 422
+    assert any(error["loc"] == ["body", "name"] for error in response.json()["detail"])
 
 
 def test_checkin_flow():
@@ -45,6 +55,18 @@ def test_checkin_rejects_invalid_day(day):
 
     assert response.status_code == 422
     assert "day must be a real date in YYYY-MM-DD format" in response.text
+
+
+@pytest.mark.parametrize("day", NON_STRING_VALUES)
+def test_checkin_rejects_non_string_day(day):
+    habit_id = client.post("/habits", json={"name": "Date type validation"}).json()[
+        "id"
+    ]
+
+    response = client.post(f"/habits/{habit_id}/checkin", json={"day": day})
+
+    assert response.status_code == 422
+    assert any(error["loc"] == ["body", "day"] for error in response.json()["detail"])
 
 
 def test_checkin_accepts_valid_calendar_date():
