@@ -20,3 +20,6 @@ uvicorn main:app --reload   # http://localhost:8000  (docs at /docs)
 - `main.py` — the app
 - `test_main.py` — pytest suite
 - `docs/TASKS.md` — the two features to implement
+
+## Code Review Workflow
+This project uses Black, Ruff, and Pytest as local quality gates before pull request review.
