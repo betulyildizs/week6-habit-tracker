@@ -2,8 +2,8 @@
 
 ## Scope and sources
 
-This report covers the Input Validation and Weekly Summary feature branches,
-their recorded implementation-time tests, and the project quality gates. The
+This report covers the Input Validation and Weekly Summary features, their
+recorded implementation-time tests, and the project quality gates. The
 repository contains `README.md`, `docs/TASKS.md`, `pyproject.toml`, and
 `check.ps1`, but no separate original-assignment-instructions file. The feature
 requirements below are therefore grounded in `docs/TASKS.md` and the assignment
@@ -38,14 +38,18 @@ Ruff, then runs the same three checks on pushes and pull requests using Python
 adds Pydantic validators to reject empty or whitespace-only habit names and
 check-in dates that are not real dates in strict `YYYY-MM-DD` form. Valid
 inputs retain the original response shapes. Tests cover blank names, malformed
-and impossible dates, valid dates, and non-string JSON values (null, integer,
-float, boolean, list, and object) for both fields.
+and impossible dates, and valid dates. Non-string JSON values (null, integer,
+float, boolean, list, and object) for both fields were covered by later tests
+in commit `dc7438a`, not by the historical feature diff reviewed by CodeRabbit.
 
 The Copilot review found no confirmed defect and recommended adding explicit
-non-string input coverage; those tests were subsequently added. In the
-implementation session, Black and Ruff passed, and the expanded validation
-suite passed with **24 tests**. The project configuration and inputs are
-preserved as provided; nonblank names are not trimmed.
+non-string input coverage; those tests were subsequently added separately in
+commit `dc7438a`. CodeRabbit later reviewed the historical feature diff, as
+documented in [CodeRabbit Review Evidence](#coderabbit-review-evidence); that
+review did not include the later non-string tests. In the implementation
+session, Black and Ruff passed, and the expanded validation suite passed with
+**24 tests**. The project configuration and inputs are preserved as provided;
+nonblank names are not trimmed.
 
 ## PR #2 — Weekly Summary
 
@@ -77,22 +81,45 @@ fix, Black and Ruff passed and Pytest passed with **10 tests**.
 Manual code inspection was performed before the independent Copilot reviews.
 These were informal observations, not submitted GitHub reviews:
 
-- **PR #1:** Valid, nonblank habit names retain leading and trailing
-  whitespace. Trimming could be a normalization improvement, but it was not a
-  requirement violation and no defect was recorded.
-- **PR #2:** The summary counts duplicate same-day check-in records
-  individually, consistent with the task's wording to count check-ins. The
-  original implementation also relied on lexicographical ordering of ISO date
-  strings for the SQL range comparison.
+- **Input Validation (PR #1)**
+  - **Manual inspection:** Valid, nonblank habit names retain leading and
+    trailing whitespace. Trimming could be a normalization improvement, but it
+    was not a requirement violation and no defect was recorded.
+  - **Copilot:** Found no confirmed defect and recommended explicit
+    non-string JSON input coverage. Those tests were added separately in
+    commit `dc7438a`.
+  - **CodeRabbit:** The retrospective review of the historical diff reported
+    no actionable findings and assessed merge risk as Minimal. The later
+    non-string tests were not part of the diff CodeRabbit reviewed.
+- **Weekly Summary (PR #2)**
+  - **Manual inspection:** The summary counts duplicate same-day check-in
+    records individually, consistent with the task's wording to count
+    check-ins. The initial implementation also relied on lexical ordering of
+    ISO date strings for the SQL range comparison.
+  - **Copilot:** Identified that malformed legacy date strings could inflate
+    the summary. A regression test reproduced the issue with a nonzero failing
+    result, and the implementation was fixed to exclude malformed dates.
+  - **CodeRabbit:** Reviewed the historical weekly-summary diff after the
+    malformed-date fix. It reported no actionable findings and assessed merge
+    risk as Minimal.
 
-The Copilot review of **PR #1** found no confirmed defect and recommended tests
-for non-string JSON values; those tests were added. For **PR #2**, Copilot
-identified malformed legacy date strings that could inflate the summary. A
-regression test reproduced the issue with a nonzero failing result, and the
-implementation was fixed to exclude malformed dates. The GitHub API showed no
-submitted review records or inline review comments for either PR; these
-informal manual observations should not be mistaken for formal GitHub review
-feedback. No CodeRabbit review is claimed.
+### CodeRabbit Review Evidence
+
+- **PR #5 — Input Validation:** CodeRabbit reviewed the historical
+  input-validation feature diff through commit `128d360`, reported no
+  actionable findings, and assessed merge risk as Minimal. The later
+  non-string validation tests were added separately in commit `dc7438a`; they
+  were not included in, and should not be attributed to, this review.
+- **PR #6 — Weekly Summary:** CodeRabbit reviewed the historical
+  weekly-summary diff through commit `976ce90`, including the malformed-date
+  regression fix. It reported no actionable findings and assessed merge risk
+  as Minimal.
+- Both CodeRabbit results are visible as bot-generated comments in the PR
+  conversations. The GitHub `reviews` API returning an empty array does not
+  mean those comments are absent.
+- PRs #5 and #6 are retrospective assessment PRs, not the original
+  implementation PRs. The original PRs #1 and #2 should not be described as
+  having received CodeRabbit reviews.
 
 ## Tradeoffs and lessons learned
 
@@ -115,11 +142,7 @@ happy-path suite alone.
 ## Verification notes
 
 The branch implementation runs recorded above are the feature-specific results.
-The new workflow has not yet run on GitHub in this change, and no GitHub Actions
-result is claimed here.
-
-On the current documentation branch, the direct quality-gate commands all
-passed: Black reported two files unchanged, Ruff reported all checks passed,
-and Pytest reported **3 passed** with one existing Starlette/httpx deprecation
-warning. Direct execution of `.\check.ps1` was blocked by the local PowerShell
-execution policy; its three commands were run individually instead.
+On the integrated main branch, the latest confirmed result is **31 passing
+tests**, with the GitHub Actions quality checks successful. These are the
+confirmed integrated results; no additional checks are claimed as run for this
+documentation update.
