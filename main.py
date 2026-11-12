@@ -10,6 +10,7 @@ Test:
     pytest
 """
 
+from datetime import date, timedelta
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -83,6 +84,35 @@ def add_checkin(habit_id: int, checkin: CheckinIn):
         )
         conn.commit()
     return {"habit_id": habit_id, "day": checkin.day}
+
+
+@app.get("/habits/{habit_id}/summary")
+def habit_summary(habit_id: int):
+    today = date.today()
+    start_day = today - timedelta(days=6)
+    with closing(get_db()) as conn:
+        habit = conn.execute(
+            "SELECT id FROM habits WHERE id = ?", (habit_id,)
+        ).fetchone()
+        if habit is None:
+            raise HTTPException(status_code=404, detail="unknown habit")
+        row = conn.execute(
+            """SELECT day FROM checkins
+               WHERE habit_id = ? AND day BETWEEN ? AND ?""",
+            (habit_id, start_day.isoformat(), today.isoformat()),
+        ).fetchall()
+    count = 0
+    for checkin in row:
+        try:
+            checkin_day = date.fromisoformat(checkin["day"])
+        except ValueError:
+            continue
+        if (
+            checkin_day.isoformat() == checkin["day"]
+            and start_day <= checkin_day <= today
+        ):
+            count += 1
+    return {"habit_id": habit_id, "count": count}
 
 
 @app.get("/habits/{habit_id}/checkins")
